@@ -1,122 +1,142 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import TextInput from "./components/TextInput";
+import LanguageSelector from "./components/LanguageSelector";
+import VoiceSelector from "./components/VoiceSelector";
+import GenerateButton from "./components/GenerateButton";
+import AudioPlayer from "./components/AudioPlayer";
+import DownloadButton from "./components/DownloadButton";
+import ErrorMessage from "./components/ErrorMessage";
+import { fetchVoices, generateSpeech, API_BASE_URL } from "./services/api";
+
+const MAX_TEXT_LENGTH = 200;
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [text, setText] = useState("");
+  const [languages, setLanguages] = useState([]);
+  const [voices, setVoices] = useState([]);
+  const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [selectedVoice, setSelectedVoice] = useState("");
+  const [audioUrl, setAudioUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoadingVoices, setIsLoadingVoices] = useState(true);
+
+  // Load languages/voices from the backend on mount
+  useEffect(() => {
+    async function loadVoices() {
+      try {
+        const data = await fetchVoices();
+        setLanguages(data.languages);
+        setVoices(data.voices);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoadingVoices(false);
+      }
+    }
+    loadVoices();
+  }, []);
+
+  // Reset the voice whenever the language changes
+  function handleLanguageChange(langCode) {
+    setSelectedLanguage(langCode);
+    setSelectedVoice("");
+  }
+
+  function handleClear() {
+    setText("");
+    setAudioUrl("");
+    setError("");
+  }
+
+  async function handleGenerate() {
+    setError("");
+
+    if (!text.trim()) {
+      setError("Please enter some text before generating speech.");
+      return;
+    }
+    if (text.length > MAX_TEXT_LENGTH) {
+      setError(`Text exceeds the maximum of ${MAX_TEXT_LENGTH} characters.`);
+      return;
+    }
+    if (!selectedLanguage) {
+      setError("Please select a language.");
+      return;
+    }
+    if (!selectedVoice) {
+      setError("Please select a voice.");
+      return;
+    }
+
+    setIsLoading(true);
+    setAudioUrl("");
+
+    try {
+      const result = await generateSpeech({
+        text: text.trim(),
+        language: selectedLanguage,
+        voice: selectedVoice,
+      });
+      // Backend returns a relative path like /audio/xyz.mp3
+      setAudioUrl(`${API_BASE_URL}${result.audioUrl}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app-shell">
+      <div className="card">
+        <h1 className="app-title">Text to Speech</h1>
+        <p className="app-subtitle">
+          Convert written text into natural-sounding speech.
+        </p>
 
-      <div className="ticks"></div>
+        <ErrorMessage message={error} onDismiss={() => setError("")} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <TextInput
+          text={text}
+          onChange={setText}
+          maxLength={MAX_TEXT_LENGTH}
+        />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {isLoadingVoices ? (
+          <p className="loading-text">Loading languages and voices...</p>
+        ) : (
+          <div className="selectors-row">
+            <LanguageSelector
+              languages={languages}
+              selectedLanguage={selectedLanguage}
+              onChange={handleLanguageChange}
+            />
+            <VoiceSelector
+              voices={voices}
+              selectedLanguage={selectedLanguage}
+              selectedVoice={selectedVoice}
+              onChange={setSelectedVoice}
+            />
+          </div>
+        )}
+
+        <div className="button-row">
+          <GenerateButton
+            onClick={handleGenerate}
+            isLoading={isLoading}
+            disabled={isLoadingVoices}
+          />
+          <button type="button" className="btn btn-ghost" onClick={handleClear}>
+            Clear
+          </button>
+        </div>
+
+        <AudioPlayer audioUrl={audioUrl} />
+        <DownloadButton audioUrl={audioUrl} />
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
