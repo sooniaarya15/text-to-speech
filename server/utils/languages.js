@@ -63,10 +63,16 @@ function toGoogleLangCode(languageCode) {
   return GOOGLE_TTS_LANG_MAP[languageCode] || null;
 }
 
+function toTranslateLangCode(googleTtsLangCode) {
+  if (googleTtsLangCode === "en-GB") return "en";
+  return googleTtsLangCode;
+}
+
 module.exports = {
   LANGUAGES,
   getVoices,
   isSupportedLanguage,
   isValidVoiceForLanguage,
   toGoogleLangCode,
+  toTranslateLangCode
 };

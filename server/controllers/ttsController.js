@@ -6,11 +6,12 @@ const { LANGUAGES } = require("../utils/languages");
 async function convertTextToSpeech(req, res) {
   const { text, language, voice } = req.body;
 
-  const { audioUrl } = await generateSpeech(text.trim(), language, voice);
+  const { audioUrl, spokenText } = await generateSpeech(text.trim(), language, voice);
 
   res.status(200).json({
     success: true,
     audioUrl,
+    spokenText,
   });
 }
 

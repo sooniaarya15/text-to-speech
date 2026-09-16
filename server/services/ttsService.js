@@ -3,7 +3,8 @@ const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const fetch = require("node-fetch");
 const googleTTS = require("google-tts-api");
-const { toGoogleLangCode } = require("../utils/languages");
+const { toGoogleLangCode, toTranslateLangCode } = require("../utils/languages");
+const { translateText } = require("./translateService");
 
 const AUDIO_DIR = path.join(__dirname, "..", "audio");
 
@@ -11,15 +12,6 @@ if (!fs.existsSync(AUDIO_DIR)) {
   fs.mkdirSync(AUDIO_DIR, { recursive: true });
 }
 
-/**
- * generateSpeech
- * Converts text into an mp3 file and returns its public URL path.
- *
- * To swap providers (Google Cloud TTS / Azure / Amazon Polly / ElevenLabs),
- * replace the body of this function. Keep the same function signature
- * (text, language, voice) => Promise<{ filename, audioUrl }> and the rest
- * of the app (controller, routes, frontend) will keep working unchanged.
- */
 async function generateSpeech(text, language, voice) {
   const googleLang = toGoogleLangCode(language);
 
@@ -29,10 +21,23 @@ async function generateSpeech(text, language, voice) {
     throw err;
   }
 
+  const targetTranslateLang = toTranslateLangCode(googleLang);
+
+  // Step 1: translate the input text into the selected language.
+  let spokenText = text;
+  try {
+    const { translatedText } = await translateText(text, targetTranslateLang);
+    if (translatedText && translatedText.trim().length > 0) {
+      spokenText = translatedText;
+    }
+  } catch (translateError) {
+    console.warn("[translate] falling back to original text:", translateError.message);
+  }
+
+  // Step 2: synthesize speech from the (translated) text.
   let base64Audio;
   try {
-    // getAudioBase64 returns base64-encoded mp3 audio for up to ~200 chars
-    base64Audio = await googleTTS.getAudioBase64(text, {
+    base64Audio = await googleTTS.getAudioBase64(spokenText, {
       lang: googleLang,
       slow: false,
       host: "https://translate.google.com",
@@ -57,12 +62,10 @@ async function generateSpeech(text, language, voice) {
   return {
     filename,
     audioUrl: `/audio/${filename}`,
+    spokenText,
   };
 }
 
-// Optional housekeeping: delete audio files older than maxAgeMs.
-// Called on an interval from server.js so the /audio folder doesn't
-// grow forever during local development.
 function cleanupOldAudio(maxAgeMs = 30 * 60 * 1000) {
   fs.readdir(AUDIO_DIR, (err, files) => {
     if (err) return;
