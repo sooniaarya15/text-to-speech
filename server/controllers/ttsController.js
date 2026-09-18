@@ -23,8 +23,7 @@ function listVoices(req, res) {
   });
 }
 
-// GET /api/health
-function healthCheck(req, res) {
+function healthCheck(req, res) {                                                 // GET /api/health
   res.status(200).json({ status: "ok", uptime: process.uptime() });
 }
 
