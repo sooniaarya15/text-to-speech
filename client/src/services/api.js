@@ -20,7 +20,7 @@ function extractErrorMessage(error) {
     );
   }
   if (error.request) {
-    // Request was made but no response received (server down / network issue)
+  
     return "Could not reach the server. Please check your connection and that the backend is running.";
   }
   return error.message || "An unexpected error occurred.";
