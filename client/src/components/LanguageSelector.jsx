@@ -1,4 +1,3 @@
-// src/components/LanguageSelector.jsx
 function LanguageSelector({ languages, selectedLanguage, onChange }) {
   return (
     <div className="field-group">
