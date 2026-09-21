@@ -91,7 +91,6 @@ cd text-to-speech
 cd server
 npm install
 copy .env.example .env      # Windows
-# cp .env.example .env      # macOS/Linux
 npm run dev
 ```
 The API will run at `http://localhost:5000`.
@@ -102,7 +101,6 @@ Open a **second terminal**:
 cd client
 npm install
 copy .env.example .env      # Windows
-# cp .env.example .env      # macOS/Linux
 npm run dev
 ```
 The app will run at `http://localhost:5173`.
